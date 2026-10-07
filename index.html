@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weather Now</title>
+  <style>
+    /* This block is the "look". It's just styling, no logic. */
+    body { font-family: -apple-system, sans-serif; background: #0f172a; color: #e2e8f0;
+           display: flex; justify-content: center; padding-top: 10vh; margin: 0; }
+    main { width: 320px; text-align: center; }
+    input { width: 100%; padding: 12px; font-size: 18px; border-radius: 8px; border: none; box-sizing: border-box; }
+    .temp { font-size: 72px; font-weight: 700; margin: 16px 0 0; }
+    .desc { font-size: 20px; color: #94a3b8; }
+    .city { font-size: 16px; color: #64748b; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <main>
+    <!-- The box the user types in. Wrapping it in a form means Enter submits it. -->
+    <form id="search">
+      <input id="city" placeholder="Type a city, press Enter" autofocus>
+    </form>
+
+    <!-- Empty slots that the code below fills in. -->
+    <p class="temp" id="temp"></p>
+    <p class="desc" id="desc"></p>
+    <p class="city" id="where"></p>
+  </main>
+
+  <script>
+    // Everything in this block is the "logic". It runs in the browser.
+
+    // Step 1: when the form is submitted (Enter), run getWeather with what they typed.
+    document.getElementById('search').addEventListener('submit', (e) => {
+      e.preventDefault();  // stop the browser from reloading the page
+      getWeather(document.getElementById('city').value);
+    });
+
+    async function getWeather(cityName) {
+      // Step 2: ask a free API "where is this city?" and get back coordinates.
+      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${cityName}&count=1`;
+      const geo = await (await fetch(geoUrl)).json();
+
+      if (!geo.results) {
+        document.getElementById('desc').textContent = "Couldn't find that city.";
+        return;
+      }
+      const place = geo.results[0];
+
+      // Step 3: ask a second API "what's the weather at these coordinates right now?"
+      const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`;
+      const wx = await (await fetch(wxUrl)).json();
+
+      // Step 4: put the answers into the empty slots on the page.
+      document.getElementById('temp').textContent = Math.round(wx.current.temperature_2m) + '°';
+      document.getElementById('desc').textContent = describe(wx.current.weather_code);
+      document.getElementById('where').textContent = `${place.name}, ${place.admin1 || place.country}`;
+    }
+
+    // The API gives weather as a number code. This turns the number into words.
+    function describe(code) {
+      if (code === 0) return 'Clear sky';
+      if (code <= 3) return 'Partly cloudy';
+      if (code <= 48) return 'Foggy';
+      if (code <= 67) return 'Rainy';
+      if (code <= 77) return 'Snowy';
+      if (code <= 82) return 'Showers';
+      return 'Thunderstorms';
+    }
+  </script>
+</body>
+</html>
